@@ -35,6 +35,51 @@ This is a **free, open-source alternative** to paid software for creating videos
 
 ---
 
+## ⚠️ Important: Photo Preparation Required
+
+**Before using the script, you must prepare your photos:**
+
+### Photo Requirements
+- **Exact size: 480×480 pixels**
+- **Aspect ratio: 1:1 (square)**
+- The script does **NOT** crop or resize photos automatically (yet)
+
+### Why This Matters
+Memory Ball requires exactly 480×480 pixel videos. If your photos are not square (480×480), the script will:
+- Scale them to fit 480×480 (may add black bars)
+- Potentially distort the image
+- Not give optimal results
+
+### How to Prepare Photos
+
+**Option 1: Use Image Editing Software**
+- Photoshop, GIMP, or any image editor
+- Crop each photo to square (1:1 ratio)
+- Resize to exactly 480×480 pixels
+- Save as JPG or PNG
+
+**Option 2: Batch Processing Tools**
+- **Windows:** IrfanView (free), XnConvert
+- **macOS:** Preview (built-in), Automator
+- **Linux:** ImageMagick, GIMP batch mode
+
+**Option 3: ImageMagick Command Line**
+```bash
+# Crop to square (center) and resize to 480x480
+magick convert input.jpg -resize 480x480^ -gravity center -extent 480x480 output.jpg
+
+# Batch process all photos in folder
+for img in *.jpg; do magick convert "$img" -resize 480x480^ -gravity center -extent 480x480 "processed_$img"; done
+```
+
+### Best Practice
+1. Create a folder `photos_original/` with your original photos
+2. Process and crop all photos to 480×480
+3. Save processed photos to `photos/` folder
+4. Run the script on the `photos/` folder
+
+---
+
 ## ✨ What This Script Does
 
 Create beautiful videos with transitions from your photos for **Memory Ball (Electronic Ball UM-ER-02)** - completely **FREE** and **open-source**!
