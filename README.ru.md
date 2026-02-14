@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-blue.svg)
 
-![GitHub Repo](https://github.com/alver/memory-ball-video)
+[GitHub Repo](https://github.com/alver/memory-ball-video)
 
 **Ключевые слова:** memory ball video, electronic ball, magic crystal ball, crystal ball display, video electronic ball, video crystal ball, UM-ER-02, memory ball видео, создать слайдшоу из фото, ffmpeg переходы видео, бесплатный видеоредактор, фото в видео конвертер, слайдшоу с музыкой, видео 480x480, альтернатива memory ball, как сделать видео из фотографий, ffmpeg слайдшоу, python видео maker, бесплатный редактор фото видео, переходы xfade, memory sphere видео, фотографии в видео бесплатно
 
