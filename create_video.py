@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Memory Ball Video Maker
-Creates videos with transitions from images for Memory Ball (Electronic Ball UM-ER-02)
+Creates videos with transitions from photos for Memory Ball (Electronic Ball UM-ER-02)
 
-Author: alver
+Author: Alver
 License: MIT
-Repository: https://github.com/alver/memory-ball-video
+Repository: https://github.com/alver/memory-ball-video-maker
 """
 
 import os
@@ -25,8 +25,40 @@ def get_video_duration(video_path):
     )
     return float(result.stdout.strip())
 
+def get_scale_filter(mode='crop'):
+    """
+    Get FFmpeg video filter for scaling/cropping to 480x480
+    
+    Modes:
+    - 'crop': Crop center to square (no black bars, may lose edges)
+    - 'pad': Add black bars to fit (shows full image)
+    - 'blur': Blurred background with original centered (artistic)
+    - 'stretch': Stretch to fit (distorts image - not recommended)
+    """
+    
+    if mode == 'crop':
+        # Crop center to square, then scale to 480x480
+        return "scale='min(iw,ih)':'min(iw,ih)',crop=480:480,scale=480:480,setsar=1"
+    
+    elif mode == 'pad':
+        # Scale to fit within 480x480, add black bars
+        return "scale=480:480:force_original_aspect_ratio=decrease,pad=480:480:(ow-iw)/2:(oh-ih)/2:black,setsar=1"
+    
+    elif mode == 'blur':
+        # Blurred background + original image centered
+        return "[0:v]scale=480:480:force_original_aspect_ratio=increase,crop=480:480,boxblur=20[bg];[0:v]scale=480:480:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1"
+    
+    elif mode == 'stretch':
+        # Stretch to 480x480 (not recommended)
+        return "scale=480:480,setsar=1"
+    
+    else:
+        # Default to crop
+        return "scale='min(iw,ih)':'min(iw,ih)',crop=480:480,scale=480:480,setsar=1"
+
 def create_video_from_images(input_folder, output_file="output.mp4", duration=5, 
-                            transition_duration=1, music_folder=None, first_photos=None):
+                            transition_duration=1, music_folder=None, first_photos=None,
+                            scale_mode='crop'):
     """
     Create video from images with random transitions and music.
     
@@ -37,6 +69,7 @@ def create_video_from_images(input_folder, output_file="output.mp4", duration=5,
         transition_duration: Transition duration between photos (seconds)
         music_folder: Path to folder with music files (optional)
         first_photos: List of filenames to show first in specified order (optional)
+        scale_mode: How to handle non-square images ('crop', 'pad', 'blur', 'stretch')
     """
     
     # All available xfade transitions
@@ -81,6 +114,7 @@ def create_video_from_images(input_folder, output_file="output.mp4", duration=5,
         print(f"  - Fixed at beginning: {len(first_photos)}")
         print(f"  - Random: {len(remaining_images)}")
     print(f"Parameters: {duration}s/photo, transition {transition_duration}s")
+    print(f"Scale mode: {scale_mode}")
     
     # Get music files
     music_files = []
@@ -90,6 +124,9 @@ def create_video_from_images(input_folder, output_file="output.mp4", duration=5,
                       if f.suffix.lower() in music_extensions]
         if music_files:
             print(f"Found {len(music_files)} music files")
+    
+    # Get scale filter for this mode
+    scale_filter = get_scale_filter(scale_mode)
     
     # Create temporary directory
     temp_dir = Path(tempfile.mkdtemp())
@@ -105,13 +142,13 @@ def create_video_from_images(input_folder, output_file="output.mp4", duration=5,
             if i % 10 == 0 or i == len(images) - 1:
                 print(f"  Processing photo {i+1}/{len(images)}...")
             
-            # Create video from single photo
+            # Create video from single photo with proper scaling
             cmd = [
                 'ffmpeg',
                 '-loop', '1',
                 '-i', str(img),
                 '-t', str(duration),
-                '-vf', 'fps=30,scale=480:480,format=yuv420p',
+                '-vf', f'fps=30,{scale_filter},format=yuv420p',
                 '-c:v', 'libx264',
                 '-preset', 'ultrafast',
                 '-crf', '23',
@@ -264,13 +301,19 @@ def create_video_from_images(input_folder, output_file="output.mp4", duration=5,
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python create_video.py <photo_folder> [output_file.mp4] [duration] [transition_duration] [--music music_folder] [--first photo1.jpg photo2.jpg ...]")
+        print("Usage: python create_video.py <photo_folder> [output_file.mp4] [duration] [transition_duration] [--music music_folder] [--first photo1.jpg photo2.jpg ...] [--mode crop|pad|blur|stretch]")
         print("\nExamples:")
         print("  python create_video.py ./photos")
         print("  python create_video.py ./photos output.mp4 5 1")
         print("  python create_video.py ./photos output.mp4 5 1 --music ./music")
         print("  python create_video.py ./photos output.mp4 5 1 --first IMG_001.jpg IMG_002.jpg IMG_003.jpg")
-        print("  python create_video.py ./photos output.mp4 5 1 --music ./music --first IMG_001.jpg IMG_002.jpg")
+        print("  python create_video.py ./photos output.mp4 5 1 --mode blur")
+        print("  python create_video.py ./photos output.mp4 5 1 --music ./music --mode pad")
+        print("\nScale modes:")
+        print("  crop   - Crop center to square (default, no black bars)")
+        print("  pad    - Add black bars to show full image")
+        print("  blur   - Blurred background with original centered")
+        print("  stretch - Stretch to fit (distorts image)")
         sys.exit(1)
     
     folder = sys.argv[1]
@@ -279,6 +322,7 @@ if __name__ == "__main__":
     trans = 1
     music_path = None
     first_photos_list = None
+    mode = 'crop'  # Default mode
     
     i = 2
     positional_count = 0
@@ -289,6 +333,13 @@ if __name__ == "__main__":
         if arg == '--music':
             if i + 1 < len(sys.argv):
                 music_path = sys.argv[i + 1]
+                i += 1
+        elif arg == '--mode':
+            if i + 1 < len(sys.argv):
+                mode = sys.argv[i + 1]
+                if mode not in ['crop', 'pad', 'blur', 'stretch']:
+                    print(f"Warning: Unknown mode '{mode}', using 'crop'")
+                    mode = 'crop'
                 i += 1
         elif arg == '--first':
             # Collect all filenames after --first until next -- or end
@@ -315,4 +366,4 @@ if __name__ == "__main__":
         
         i += 1
     
-    create_video_from_images(folder, output, dur, trans, music_path, first_photos_list)
+    create_video_from_images(folder, output, dur, trans, music_path, first_photos_list, mode)
